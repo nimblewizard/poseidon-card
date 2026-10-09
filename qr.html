@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>QR Maker · Scan Card</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --ground: #e9ebe6; --card: #fff; --ink: #15201f; --ink-soft: #5c6a67; --line: #d9ddd7; --accent: #1b6f6a; --accent-ink: #fff;
+  --display: "Bricolage Grotesque", "Avenir Next", Arial, sans-serif; --body: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root { --ground: #0f1a1c; --card: #182628; --ink: #eef2f0; --ink-soft: #9fb0ad; --line: #2b3d40; --accent: #4fb3ac; --accent-ink: #06201f; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--body); padding-inline: 16px; padding-block: 24px 40px; line-height: 1.5; }
+.wrap { max-width: 520px; margin: 0 auto; display: grid; gap: 16px; }
+h1 { font-family: var(--display); font-size: 1.6rem; margin: 0; }
+p.lead { margin: 0; color: var(--ink-soft); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: grid; gap: 14px; }
+label { display: grid; gap: 6px; font-size: .85rem; font-weight: 600; }
+input, select { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); width: 100%; }
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#qr { display: grid; place-items: center; background: #fff; padding: 24px; border-radius: 12px; }
+#qr img, #qr canvas { max-width: 100%; height: auto; }
+.btns { display: flex; gap: 10px; flex-wrap: wrap; }
+button, a.btn { font: inherit; font-weight: 600; padding: 12px 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; text-decoration: none; }
+.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+small { color: var(--ink-soft); }
+@media print {
+  body { background: #fff; padding: 0; }
+  .card, h1, p.lead, .btns, label, .tips { display: none; }
+  .card.print { display: grid; border: 0; }
+  #qr { padding: 0; }
+  #print-label { display: block; text-align: center; font-family: var(--display); font-size: 18pt; color: #000; }
+}
+#print-label { display: none; }
+@media (max-width: 400px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>QR code for your card</h1>
+  <p class="lead">Paste the public URL of your card page, then download or print. Test it with your phone camera before you print a batch.</p>
+
+  <div class="card">
+    <label>Card URL <input id="url" type="url" placeholder="https://yourname.github.io/scan-card/" value=""></label>
+    <div class="row">
+      <label>Size (px) <select id="size"><option>256</option><option selected>512</option><option>1024</option><option>2048</option></select></label>
+      <label>Error correction <select id="ecl"><option value="M">Medium</option><option value="Q" selected>Quartile (logo-safe)</option><option value="H">High</option></select></label>
+    </div>
+    <label>Label under the code (print only) <input id="label" type="text" placeholder="Scan to save our contact & leave a review" value="Scan to save our contact & leave a review"></label>
+  </div>
+
+  <div class="card print">
+    <div id="qr"></div>
+    <div id="print-label"></div>
+  </div>
+
+  <div class="btns">
+    <a class="btn primary" id="dl" href="#" download="scan-card-qr.png">Download PNG</a>
+    <button type="button" id="print">Print</button>
+  </div>
+
+  <div class="card tips">
+    <strong>Print tips</strong>
+    <small>Keep the code at least 2 cm (¾ in) wide on a business card and 5 cm (2 in) on a counter sign. Leave a white border around it. Dark code on a light background only.</small>
+    <small>Put the URL in plain text under the code too, for anyone whose camera won't scan.</small>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let qr = null;
+function render() {
+  const url = $("url").value.trim();
+  const size = parseInt($("size").value, 10);
+  const ecl = QRCode.CorrectLevel[$("ecl").value];
+  $("qr").innerHTML = "";
+  $("print-label").textContent = $("label").value;
+  if (!url) return;
+  qr = new QRCode($("qr"), { text: url, width: size, height: size, colorDark: "#000000", colorLight: "#ffffff", correctLevel: ecl });
+  setTimeout(() => {
+    const canvas = $("qr").querySelector("canvas");
+    if (canvas) $("dl").href = canvas.toDataURL("image/png");
+  }, 50);
+}
+["url", "size", "ecl", "label"].forEach((id) => $(id).addEventListener("input", render));
+$("print").addEventListener("click", () => window.print());
+try { const saved = localStorage.getItem("scan-card-url"); if (saved) $("url").value = saved; } catch {}
+$("url").addEventListener("input", () => { try { localStorage.setItem("scan-card-url", $("url").value); } catch {} });
+render();
+</script>
+</body>
+</html>
