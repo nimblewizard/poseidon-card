@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Team sign in · Poseidon Solutions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<div class="sea" aria-hidden="true"></div>
+<div class="wrap">
+  <div class="brand">
+    <img src="logo.jpg" alt="">
+    <h1>Poseidon Solutions</h1>
+    <p>Team digital cards</p>
+  </div>
+
+  <div class="card" id="setup" hidden>
+    <h2>Not set up yet</h2>
+    <p class="muted">The Firebase project keys haven't been added to <code>firebase-config.js</code> yet, so sign-in can't work. See the README for the five-minute setup.</p>
+  </div>
+
+  <div class="card" id="auth" hidden>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-in" aria-selected="true">Sign in</button>
+      <button type="button" role="tab" id="tab-up" aria-selected="false">Create account</button>
+    </div>
+    <form id="form" novalidate>
+      <div style="display:grid;gap:12px">
+        <label>Email <input id="email" type="email" autocomplete="email" required></label>
+        <label>Password <input id="password" type="password" autocomplete="current-password" minlength="6" required></label>
+        <label id="invite-wrap" hidden>Team invite code <input id="invite" type="text" autocomplete="off" placeholder="Ask your manager"></label>
+        <div class="notice err" id="err" hidden></div>
+        <button class="btn primary" id="go" type="submit">Sign in</button>
+        <button class="btn quiet" id="forgot" type="button">Forgot password?</button>
+      </div>
+    </form>
+  </div>
+
+  <p class="muted" style="text-align:center;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.4)">Sign in to create or edit your card, get your QR code, and share your link.</p>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="firebase-config.js"></script>
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const toast = (m) => { const t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); };
+const showErr = (m) => { $("err").textContent = m; $("err").hidden = !m; };
+
+if (!window.FIREBASE_READY()) { $("setup").hidden = false; }
+else {
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+  const { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } =
+    await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js");
+  const auth = getAuth(initializeApp(window.FIREBASE_CONFIG));
+  $("auth").hidden = false;
+
+  let mode = "in";
+  const setMode = (m) => {
+    mode = m;
+    $("tab-in").setAttribute("aria-selected", m === "in");
+    $("tab-up").setAttribute("aria-selected", m === "up");
+    $("invite-wrap").hidden = m !== "up";
+    $("go").textContent = m === "in" ? "Sign in" : "Create account";
+    $("password").autocomplete = m === "in" ? "current-password" : "new-password";
+    $("forgot").hidden = m !== "in";
+    showErr("");
+  };
+  $("tab-in").onclick = () => setMode("in");
+  $("tab-up").onclick = () => setMode("up");
+  if (location.hash === "#new") setMode("up");
+
+  onAuthStateChanged(auth, (user) => { if (user) location.replace("me.html"); });
+
+  const friendly = (e) => ({
+    "auth/invalid-credential": "Wrong email or password.",
+    "auth/user-not-found": "No account with that email. Switch to Create account.",
+    "auth/wrong-password": "Wrong password.",
+    "auth/email-already-in-use": "That email already has an account. Switch to Sign in.",
+    "auth/weak-password": "Use at least 6 characters.",
+    "auth/invalid-email": "That email address doesn't look right.",
+    "auth/too-many-requests": "Too many tries. Wait a minute and try again.",
+  })[e.code] || e.message;
+
+  $("form").addEventListener("submit", async (ev) => {
+    ev.preventDefault(); showErr("");
+    const email = $("email").value.trim(), pw = $("password").value;
+    if (!email || pw.length < 6) { showErr("Enter your email and a password of at least 6 characters."); return; }
+    $("go").disabled = true;
+    try {
+      if (mode === "in") await signInWithEmailAndPassword(auth, email, pw);
+      else {
+        const invite = $("invite").value.trim();
+        if (!invite) { showErr("Enter the team invite code."); $("go").disabled = false; return; }
+        try { sessionStorage.setItem("inviteCode", invite); } catch {}
+        await createUserWithEmailAndPassword(auth, email, pw);
+      }
+    } catch (e) { showErr(friendly(e)); $("go").disabled = false; }
+  });
+
+  $("forgot").onclick = async () => {
+    const email = $("email").value.trim();
+    if (!email) { showErr("Enter your email first, then tap Forgot password."); return; }
+    try { await sendPasswordResetEmail(auth, email); toast("Reset email sent"); } catch (e) { showErr(friendly(e)); }
+  };
+}
+</script>
+</body>
+</html>

@@ -195,120 +195,128 @@ body {
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="company.js"></script>
+<script src="firebase-config.js"></script>
 <script>
-/* ============================================================
-   EDIT THIS BLOCK. Everything on the page is built from it.
-   ============================================================ */
-const CARD = {
-  company:  "Poseidon Solutions",
-  tagline:  "Water treatment, purification and plumbing for Colorado homes.",
-  name:     "Chris Lucia",
-  role:     "Technician",
-  photo:    "logo.jpg",          // swap for a headshot (e.g. "chris.jpg") if you want a face here
-  phone:    "+17196323508",
-  phoneDisplay: "(719) 632-3508",
-  email:    "info@waterbyposeidon.com",
-  website:  "https://waterbyposeidon.com",
-  websiteDisplay: "waterbyposeidon.com",
-  address:  "6058 Hollow Tree Ct, Colorado Springs, CO 80918",
-  mapsUrl:  "https://www.google.com/maps/dir/?api=1&destination=6058+Hollow+Tree+Ct,+Colorado+Springs,+CO+80918",
-  hours:    "Mon–Fri 11am–8pm · Sat 10am–4pm · Sun closed",
-  services: ["Whole-home water systems", "RO drinking water", "Water conditioners", "Iron & manganese filters", "Tankless water heaters", "Plumbing"],
-
-  reviewUrl:   "https://search.google.com/local/writereview?placeid=ChIJi0Lxn48iRwoRJfy-xOXq53A",
-  reviewTitle: "How did we do today?",
-  reviewText:  "A quick Google review takes 30 seconds and helps a local Colorado Springs business more than you'd think.",
-
-  socials: [
-    { label: "Facebook",  url: "https://www.facebook.com/PoseidonHomeSolutions/" },
-    { label: "Instagram", url: "https://www.instagram.com/poseidonsolutions/" },
-    { label: "Website",   url: "https://waterbyposeidon.com" },
-  ],
-  footer: "Purity from the Gods",
-};
-/* ============================================================ */
-
 const $ = (id) => document.getElementById(id);
 const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1800); };
 
-$("company").textContent = CARD.company;
-$("tagline").textContent = CARD.tagline;
-$("name").textContent = CARD.name;
-$("role").textContent = CARD.role;
-$("avatar").src = CARD.photo;
-$("avatar").alt = CARD.company + " logo";
-document.title = `${CARD.name} · ${CARD.company}`;
+function digits(p) { const d = String(p || "").replace(/[^\d+]/g, ""); return d.startsWith("+") ? d : (d.length === 10 ? "+1" + d : "+" + d); }
+function pretty(p) { const d = String(p || "").replace(/\D/g, ""); const n = d.length === 11 && d[0] === "1" ? d.slice(1) : d; return n.length === 10 ? `(${n.slice(0,3)}) ${n.slice(3,6)}-${n.slice(6)}` : p; }
 
-$("a-call").href  = `tel:${CARD.phone}`;
-$("a-text").href  = `sms:${CARD.phone}`;
-$("a-email").href = `mailto:${CARD.email}`;
-$("a-map").href   = CARD.mapsUrl;
+function render(person) {
+  const C = window.COMPANY;
+  const CARD = {
+    ...C,
+    name: person.name, role: person.role,
+    phone: digits(person.phone), phoneDisplay: person.phoneDisplay || pretty(person.phone),
+    email: person.email, photo: person.photo || C.logo,
+  };
 
-const rows = [
-  ["Phone",   CARD.phoneDisplay, `tel:${CARD.phone}`, CARD.phoneDisplay],
-  ["Email",   CARD.email, `mailto:${CARD.email}`, CARD.email],
-  ["Website", CARD.websiteDisplay, CARD.website, CARD.website],
-  ["Address", CARD.address, CARD.mapsUrl, CARD.address],
-  ["Hours",   CARD.hours, null, null],
-];
-for (const [label, value, href, copyText] of rows) {
-  if (!value) continue;
-  const row = document.createElement("div"); row.className = "detail";
-  const left = document.createElement("div");
-  left.innerHTML = `<div class="label"></div><div class="value"></div>`;
-  left.querySelector(".label").textContent = label;
-  const v = left.querySelector(".value");
-  if (href) { const a = document.createElement("a"); a.href = href; a.textContent = value; if (href.startsWith("http")) { a.target = "_blank"; a.rel = "noopener"; } v.appendChild(a); }
-  else v.textContent = value;
-  row.appendChild(left);
-  if (copyText) {
-    const b = document.createElement("button"); b.type = "button"; b.className = "copy"; b.textContent = "Copy";
-    b.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(copyText); toast(`${label} copied`); }
-      catch { const r = document.createRange(); r.selectNodeContents(v); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Select and copy"); }
-    });
-    row.appendChild(b);
+  $("company").textContent = C.name;
+  $("tagline").textContent = C.tagline;
+  $("name").textContent = CARD.name;
+  $("role").textContent = CARD.role;
+  $("avatar").src = CARD.photo;
+  $("avatar").alt = person.photo ? CARD.name : C.name + " logo";
+  document.title = `${CARD.name} · ${C.name}`;
+
+  $("a-call").href  = `tel:${CARD.phone}`;
+  $("a-text").href  = `sms:${CARD.phone}`;
+  $("a-email").href = `mailto:${CARD.email}`;
+  $("a-map").href   = C.mapsUrl;
+
+  $("details").innerHTML = "";
+  const rows = [
+    ["Phone",   CARD.phoneDisplay, `tel:${CARD.phone}`, CARD.phoneDisplay],
+    ["Email",   CARD.email, `mailto:${CARD.email}`, CARD.email],
+    ["Website", C.websiteDisplay, C.website, C.website],
+    ["Address", C.address, C.mapsUrl, C.address],
+    ["Hours",   C.hours, null, null],
+  ];
+  for (const [label, value, href, copyText] of rows) {
+    if (!value) continue;
+    const row = document.createElement("div"); row.className = "detail";
+    const left = document.createElement("div");
+    left.innerHTML = `<div class="label"></div><div class="value"></div>`;
+    left.querySelector(".label").textContent = label;
+    const v = left.querySelector(".value");
+    if (href) { const a = document.createElement("a"); a.href = href; a.textContent = value; if (href.startsWith("http")) { a.target = "_blank"; a.rel = "noopener"; } v.appendChild(a); }
+    else v.textContent = value;
+    row.appendChild(left);
+    if (copyText) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "copy"; b.textContent = "Copy";
+      b.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(copyText); toast(`${label} copied`); }
+        catch { const r = document.createRange(); r.selectNodeContents(v); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Select and copy"); }
+      });
+      row.appendChild(b);
+    }
+    $("details").appendChild(row);
   }
-  $("details").appendChild(row);
+
+  $("services").innerHTML = "";
+  for (const s of C.services || []) { const el = document.createElement("span"); el.textContent = s; $("services").appendChild(el); }
+
+  $("review").href = C.reviewUrl;
+  $("review-title").textContent = C.reviewTitle;
+  $("review-text").textContent = C.reviewText;
+
+  $("socials").innerHTML = "";
+  for (const s of C.socials || []) {
+    const a = document.createElement("a"); a.href = s.url; a.textContent = s.label; a.target = "_blank"; a.rel = "noopener";
+    $("socials").appendChild(a);
+  }
+  $("foot").textContent = C.footer || "";
+
+  // vCard download
+  const vcard = () => {
+    const esc = (x) => String(x || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\;");
+    const parts = CARD.name.trim().split(/\s+/); const last = parts.length > 1 ? parts.pop() : ""; const first = parts.join(" ");
+    return [
+      "BEGIN:VCARD", "VERSION:3.0",
+      `N:${esc(last)};${esc(first)};;;`, `FN:${esc(CARD.name)}`,
+      `ORG:${esc(C.name)}`, `TITLE:${esc(CARD.role)}`,
+      `TEL;TYPE=CELL,VOICE:${CARD.phone}`, `EMAIL;TYPE=INTERNET:${CARD.email}`,
+      `URL:${C.website}`, `ADR;TYPE=WORK:;;${esc(C.address)};;;;`,
+      `NOTE:${esc(C.tagline)}`, "END:VCARD", ""
+    ].join("\r\n");
+  };
+  $("save").onclick = async () => {
+    try {
+      const url = URL.createObjectURL(new Blob([vcard()], { type: "text/vcard;charset=utf-8" }));
+      const a = document.createElement("a"); a.href = url; a.download = `${CARD.name.replace(/\s+/g, "_")}.vcf`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast("Contact card downloading");
+    } catch {
+      try { await navigator.clipboard.writeText(`${CARD.name}\n${C.name}\n${CARD.phoneDisplay}\n${CARD.email}\n${C.website}`); toast("Contact details copied"); }
+      catch { toast("Use the Copy buttons above"); }
+    }
+  };
 }
 
-for (const s of CARD.services || []) { const el = document.createElement("span"); el.textContent = s; $("services").appendChild(el); }
-
-$("review").href = CARD.reviewUrl;
-$("review-title").textContent = CARD.reviewTitle;
-$("review-text").textContent = CARD.reviewText;
-
-for (const s of CARD.socials || []) {
-  const a = document.createElement("a"); a.href = s.url; a.textContent = s.label; a.target = "_blank"; a.rel = "noopener";
-  $("socials").appendChild(a);
-}
-$("foot").textContent = CARD.footer || "";
-
-// vCard download (works when self-hosted; falls back to copying the contact text)
-function vcard() {
-  const esc = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\;");
-  const parts = CARD.name.trim().split(/\s+/); const last = parts.length > 1 ? parts.pop() : ""; const first = parts.join(" ");
-  return [
-    "BEGIN:VCARD", "VERSION:3.0",
-    `N:${esc(last)};${esc(first)};;;`, `FN:${esc(CARD.name)}`,
-    `ORG:${esc(CARD.company)}`, `TITLE:${esc(CARD.role)}`,
-    `TEL;TYPE=CELL,VOICE:${CARD.phone}`, `EMAIL;TYPE=INTERNET:${CARD.email}`,
-    `URL:${CARD.website}`, `ADR;TYPE=WORK:;;${esc(CARD.address)};;;;`,
-    `NOTE:${esc(CARD.tagline)}`, "END:VCARD", ""
-  ].join("\r\n");
-}
-$("save").addEventListener("click", async () => {
-  const text = vcard();
+async function main() {
+  const slug = new URLSearchParams(location.search).get("u");
+  if (!slug) { render(window.DEFAULT_PERSON); return; }
+  if (!window.FIREBASE_READY()) { render({ ...window.DEFAULT_PERSON }); toast("Team cards are not set up yet"); return; }
   try {
-    const url = URL.createObjectURL(new Blob([text], { type: "text/vcard;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = `${CARD.name.replace(/\s+/g, "_")}.vcf`;
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast("Contact card downloading");
-  } catch {
-    try { await navigator.clipboard.writeText(`${CARD.name}\n${CARD.company}\n${CARD.phoneDisplay}\n${CARD.email}\n${CARD.website}`); toast("Contact details copied"); }
-    catch { toast("Use the Copy buttons above"); }
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+    const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js");
+    const db = getFirestore(initializeApp(window.FIREBASE_CONFIG));
+    const snap = await getDoc(doc(db, "profiles", slug.toLowerCase()));
+    if (!snap.exists() || snap.data().active === false) {
+      render(window.DEFAULT_PERSON);
+      toast("That team card isn't available. Showing our main card.");
+      return;
+    }
+    render(snap.data());
+  } catch (e) {
+    console.error(e);
+    render(window.DEFAULT_PERSON);
+    toast("Couldn't load that card. Showing our main card.");
   }
-});
+}
+main();
 </script>
 </body>
 </html>
