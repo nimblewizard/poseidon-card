@@ -237,7 +237,6 @@ function render(person) {
   document.title = `${CARD.name} · ${C.name}`;
 
   $("a-call").href  = `tel:${CARD.phone}`;
-  $("a-text").href  = `sms:${CARD.phone}`;
   $("a-email").href = `mailto:${CARD.email}`;
   $("a-map").href   = C.mapsUrl;
 
