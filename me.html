@@ -137,8 +137,19 @@ function showShare(slug) {
   const url = cardUrl(slug);
   $("link").value = url; $("open").href = url;
   $("qr").innerHTML = "";
-  new QRCode($("qr"), { text: url, width: 320, height: 320, colorDark: "#0d2242", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.Q });
-  setTimeout(() => { const c = $("qr").querySelector("canvas"); if (c) $("download").href = c.toDataURL("image/png"); }, 80);
+  new QRCode($("qr"), { text: url, width: 640, height: 640, colorDark: "#0d2242", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+  setTimeout(() => {
+    const c = $("qr").querySelector("canvas"); if (!c) return;
+    // trident logo in the center (H error correction tolerates the covered area)
+    const logo = new Image(); logo.src = "logo.jpg";
+    logo.onload = () => {
+      const ctx = c.getContext("2d"), w = c.width, tile = Math.round(w * 0.24), inner = Math.round(tile * 0.86), x = (w - tile) / 2;
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.roundRect(x, x, tile, tile, tile / 6); ctx.fill();
+      ctx.drawImage(logo, x + (tile - inner) / 2, x + (tile - inner) / 2, inner, inner);
+      const img = $("qr").querySelector("img"); if (img) img.src = c.toDataURL("image/png");
+      $("download").href = c.toDataURL("image/png");
+    };
+  }, 80);
   $("download").download = `${slug}-poseidon-qr.png`;
 }
 $("copy").onclick = async () => { try { await navigator.clipboard.writeText($("link").value); toast("Link copied"); } catch { $("link").select(); toast("Select and copy"); } };
